@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Réserve">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Réserve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --ink:#1E3329; --ink2:#2E4A3D; --paper:#EDEFE8; --card:#F8F9F5; --line:#D3D8CF; --tin:#8E978F; --text:#1C231F; --mute:#5E6862;
+  --prot:#A8432F; --lip:#C99513; --glu:#6A8A2E; --eau:#2F6E9A; --exp:#B3261E; --soon:#C77700;
+  --cond:"Barlow Condensed", "Arial Narrow", sans-serif; --body:"Barlow", system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--text);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+main{max-width:640px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px 24px}
+h1{font:700 2rem/1.05 var(--cond);margin:.4rem 0 .6rem;letter-spacing:-.01em}
+h2{font:600 1.35rem/1.1 var(--cond);margin:1.4rem 0 .5rem}
+p{margin:.3rem 0}
+.lead{color:var(--mute);max-width:36em}
+.num{font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--lip);outline-offset:2px}
+
+/* Hero : le compteur d'autonomie */
+.hero{background:var(--ink);color:var(--paper);margin:calc(-12px - env(safe-area-inset-top)) -16px 0;padding:calc(20px + env(safe-area-inset-top)) 20px 20px}
+.count{display:flex;align-items:baseline;gap:.4rem}
+.count .n{font:700 5.5rem/0.85 var(--cond);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.count .u{font:600 1.8rem/1 var(--cond);color:#C9D1C8}
+.hero p{color:#C9D1C8;margin-top:.5rem}
+.track{height:6px;background:var(--ink2);border-radius:3px;margin:.8rem 0 1rem;overflow:hidden}
+.track span{display:block;height:100%;background:var(--lip)}
+.facts{display:flex;gap:28px}
+.facts b{display:block;font:600 1.5rem/1.1 var(--cond);font-variant-numeric:tabular-nums}
+.facts span{font-size:.85rem;color:#C9D1C8}
+.mbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--ink2);margin:1rem 0 .5rem}
+.mleg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:.85rem;color:#C9D1C8}
+.mleg b{color:var(--paper);font-weight:600}
+.mleg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:1px}
+.hero .note{font-size:.85rem;color:#E4C77A;margin-top:.8rem}
+
+/* Contrôles */
+.seg{display:flex;background:#DDE1D8;border-radius:10px;padding:3px;margin:1rem 0}
+.seg button{flex:1;border:0;background:none;padding:.5rem;border-radius:8px;font-weight:600}
+.seg button.on{background:var(--card);box-shadow:0 1px 2px rgba(30,51,41,.18)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;border:1.5px solid var(--ink);background:none;border-radius:10px;padding:.7rem 1rem;font-weight:600;cursor:pointer;text-align:center}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.big{width:100%;padding:1.1rem;font:600 1.3rem var(--cond)}
+.btn.danger{border-color:var(--exp);color:var(--exp)}
+.btn.small{padding:.4rem .7rem;font-size:.9rem}
+.stack{display:grid;gap:10px;margin:1rem 0}
+.actions{display:flex;gap:10px;margin-top:1rem}
+.actions .btn{flex:1}
+.actions.sticky{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--paper);padding:10px 0}
+
+.form{display:grid;gap:12px}
+label{display:grid;gap:4px;font-size:.85rem;font-weight:500;color:var(--mute)}
+input,select{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:.65rem .7rem;font-size:1rem;color:var(--text);min-width:0}
+input:focus,select:focus{border-color:var(--ink);outline:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px}
+label.check{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;color:var(--text)}
+label.check input{width:22px;height:22px;flex:none;margin:0}
+.hint{font-size:.85rem;color:var(--mute)}
+.warn{color:var(--exp);font-weight:500}
+.prod-head{display:flex;gap:12px;align-items:center}
+.prod-head img{width:56px;height:56px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line)}
+.codeline{display:flex;gap:8px}
+.codeline input{flex:1}
+
+/* Stock */
+.catblock{margin-top:1.2rem}
+.cath{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid currentColor;padding-bottom:4px;margin-bottom:4px}
+.cath h2{margin:0}
+.cath span{font-size:.85rem;color:var(--mute)}
+ul{list-style:none;margin:0;padding:0}
+.lot{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.lotmain{flex:1;min-width:0;cursor:pointer}
+.nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:.85rem;color:var(--mute)}
+.dt{font-size:.85rem;font-weight:500}
+.lot.exp .dt{color:var(--exp)} .lot.soon .dt{color:var(--soon)} .lot.ddm .dt{color:var(--soon)}
+.lot.exp{border-left:4px solid var(--exp);padding-left:8px}
+.lot.soon,.lot.ddm{border-left:4px solid var(--soon);padding-left:8px}
+.qty{display:flex;align-items:center;gap:2px;flex:none}
+.qty button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-size:1.2rem;line-height:1}
+.qty span{min-width:30px;text-align:center;font:600 1.2rem var(--cond);font-variant-numeric:tabular-nums}
+.cattag{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.prio{border-left:4px solid var(--soon)}
+.shop li{padding:8px 0;border-bottom:1px solid var(--line)}
+.shop li:last-child{border:0}
+
+.empty{text-align:center;padding:2rem 1rem}
+.empty p{color:var(--mute);margin-bottom:1rem}
+
+/* Ticket */
+.lines{display:grid;gap:10px;margin-top:1rem}
+.line{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
+.line.off{opacity:.45}
+.line.off .g2,.line.off .g4{display:none}
+.raw{font-family:var(--cond);font-weight:600;font-size:1.05rem;letter-spacing:.02em}
+.calc{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.loading{text-align:center;padding:3rem 1rem;color:var(--mute)}
+.spin{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--ink);border-radius:50%;margin:0 auto 1rem;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hist li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:.95rem}
+
+/* Prix */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chips button{flex:none;border:1.5px solid var(--line);background:var(--card);border-radius:20px;padding:.35rem .8rem;font-size:.9rem;font-weight:500}
+.chips button.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.pg{border-bottom:1px solid var(--line)}
+.pgh{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;border:0;background:none;padding:12px 0;cursor:pointer}
+.pn{font-weight:600}
+.pv{font:600 1.2rem var(--cond);font-variant-numeric:tabular-nums;text-align:right}
+.ps{font-size:.85rem;color:var(--mute);grid-column:1}
+.pgh svg{grid-column:2;justify-self:end}
+.up{color:var(--exp)} .down{color:var(--glu)}
+.pdet{padding:0 0 12px}
+.pdet table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums;margin:.4rem 0 .8rem}
+.pdet td,.pdet th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left}
+.pdet th{font-weight:600;color:var(--mute);font-size:.8rem}
+.pdet td.r,.pdet th.r{text-align:right}
+.del{border:0;background:none;color:var(--exp);font-size:1.1rem;padding:0 4px}
+
+/* Nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--ink);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:10}
+nav button{flex:1;border:0;background:none;color:#AEB9AF;font:600 1rem var(--cond);padding:10px 2px;border-radius:8px;letter-spacing:.02em}
+nav button.on{color:var(--paper);background:var(--ink2)}
+
+#scan{position:fixed;inset:0;background:#000;z-index:30;display:flex;flex-direction:column;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#scan[hidden]{display:none}
+#reader{width:100%}
+#scan p{color:#ddd;text-align:center;margin:1rem}
+#scan .btn{margin:0 auto;border-color:#fff;color:#fff;min-width:160px}
+
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:#fff;padding:.7rem 1rem;border-radius:10px;font-size:.95rem;max-width:90vw;z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main id="main"></main>
+
+<nav aria-label="Navigation">
+  <button data-v="stock" onclick="go('stock')">Stock</button>
+  <button data-v="add" onclick="go('add')">Ajouter</button>
+  <button data-v="ticket" onclick="go('ticket')">Ticket</button>
+  <button data-v="prices" onclick="go('prices')">Prix</button>
+  <button data-v="settings" onclick="go('settings')">Réglages</button>
+</nav>
+
+<div id="scan" hidden>
+  <div id="reader"></div>
+  <p>Vise le code-barres, il est lu automatiquement.</p>
+  <button class="btn" onclick="closeScanner()">Fermer</button>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Données ---------- */
+const CATS = {
+  proteines:{label:'Protéines', color:'var(--prot)'},
+  lipides:{label:'Lipides', color:'var(--lip)'},
+  glucides:{label:'Glucides', color:'var(--glu)'},
+  eau:{label:'Eau', color:'var(--eau)'},
+  hygiene:{label:'Hygiène', color:'var(--tin)'},
+  pharmacie:{label:'Pharmacie', color:'var(--tin)'},
+  autre:{label:'Autre', color:'var(--tin)'}
+};
+const MACROS = ['proteines','lipides','glucides'];
+const MK = {proteines:'pk', lipides:'fk', glucides:'ck'};
+const MF = {proteines:['p100',4], lipides:['f100',9], glucides:['c100',4]};
+const MODELS = [['claude-haiku-4-5-20251001','Haiku 4.5, économique'],['claude-sonnet-5','Sonnet 5, plus précis']];
+const DEFAULTS = {settings:{apiKey:'', model:MODELS[0][0], people:1, kcal:2000, water:2, targetDays:90, alertWeeks:8, split:{proteines:20, lipides:30, glucides:50}}, products:{}, items:[], purchases:[]};
+const KEY = 'reserve-v1';
+const clone = o => JSON.parse(JSON.stringify(o));
+
+function merge(d){
+  const b = clone(DEFAULTS), s = d.settings || {};
+  return {settings:{...b.settings, ...s, split:{...b.settings.split, ...(s.split||{})}}, products:d.products||{}, items:d.items||[], purchases:d.purchases||[]};
+}
+function load(){ try{ const s = localStorage.getItem(KEY); if(s) return merge(JSON.parse(s)); }catch(e){} return clone(DEFAULTS); }
+let S = load();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Sauvegarde impossible sur cet appareil'); } }
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+
+/* ---------- Utilitaires ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const num = v => { const n = parseFloat(String(v ?? '').replace(',','.')); return isFinite(n) ? n : 0; };
+const eur = n => n.toLocaleString('fr-FR', {style:'currency', currency:'EUR'});
+const fmt = (n, d=0) => (n||0).toLocaleString('fr-FR', {maximumFractionDigits:d});
+const round2 = n => Math.round(n*100)/100;
+function todayLocal(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function daysUntil(date){ return Math.round((new Date(date+'T00:00') - new Date(todayLocal()+'T00:00')) / 86400000); }
+function fdate(d){ if(!d) return ''; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; }
+function unitOf(cat){ return cat === 'eau' ? '/L' : '/kg'; }
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2800); }
+
+function guessCat(p, f, c, tags=[]){
+  if(tags.some(t => /waters|eaux/.test(t))) return 'eau';
+  const a = [['proteines',p*4],['lipides',f*9],['glucides',c*4]].sort((x,y) => y[1]-x[1]);
+  return a[0][1] > 0 ? a[0][0] : 'autre';
+}
+function catOptions(sel){ return Object.entries(CATS).map(([k,v]) => `<option value="${k}" ${k===sel?'selected':''}>${v.label}</option>`).join(''); }
+function isDead(it){ return it.dateType === 'DLC' && it.date && daysUntil(it.date) < 0; }
+
+/* ---------- Calculs de stock ---------- */
+function itemStats(it){
+  const p = S.products[it.productKey]; const r = {kcal:0, pk:0, fk:0, ck:0, liters:0};
+  if(!p) return r;
+  const f = num(p.weightG) * it.qty / 100;
+  if(p.category === 'eau'){ r.liters = num(p.weightG) * it.qty / 1000; return r; }
+  r.kcal = num(p.kcal100)*f; r.pk = num(p.p100)*4*f; r.fk = num(p.f100)*9*f; r.ck = num(p.c100)*4*f;
+  return r;
+}
+function totals(){
+  const t = {kcal:0, pk:0, fk:0, ck:0, liters:0, missing:0};
+  for(const it of S.items){
+    if(it.qty <= 0 || isDead(it)) continue;
+    const s = itemStats(it); for(const k in s) t[k] += s[k];
+    const p = S.products[it.productKey];
+    if(p && MACROS.includes(p.category) && !num(p.kcal100)) t.missing++;
+  }
+  return t;
+}
+function status(it){
+  if(!it.date) return {cls:'', txt:'Sans date', rank:4};
+  const d = daysUntil(it.date), w = S.settings.alertWeeks * 7;
+  if(d < 0) return it.dateType === 'DDM' ? {cls:'ddm', txt:`DDM passée depuis ${-d} j, encore consommable`, rank:1} : {cls:'exp', txt:`DLC dépassée depuis ${-d} j`, rank:0};
+  if(d <= w) return {cls:'soon', txt:`${it.dateType} dans ${d} j (${fdate(it.date)})`, rank:2};
+  return {cls:'', txt:`${it.dateType} ${fdate(it.date)}`, rank:3};
+}
+
+/* ---------- Prix ---------- */
+function ppk(p){ const w = num(p.weightG) * num(p.qty); return w ? p.total / (w/1000) : null; }
+function sameGeneric(a, b){ return (a||'').trim().toLowerCase() === (b||'').trim().toLowerCase(); }
+function kcalOf(p){
+  let prod = p.productKey && S.products[p.productKey];
+  if(!prod || !num(prod.kcal100)) prod = Object.values(S.products).find(x => x.generic && sameGeneric(x.generic, p.generic) && num(x.kcal100));
+  if(!prod) return null;
+  const w = num(p.weightG) || num(prod.weightG);
+  return w ? num(prod.kcal100) * w / 100 * num(p.qty || 1) : null;
+}
+function per1000(p){ const k = kcalOf(p); return k ? p.total / k * 1000 : null; }
+function unitPriceFor(prod){
+  const l = S.purchases.filter(x => x.productKey === prod.key || (prod.generic && sameGeneric(x.generic, prod.generic)));
+  if(!l.length) return null;
+  let best = null; for(const x of l){ const v = ppk(x); if(v != null && (best == null || v < best)) best = v; }
+  if(best != null && num(prod.weightG)) return best * num(prod.weightG) / 1000;
+  const x = l[l.length-1]; return x.total / num(x.qty || 1);
+}
+function genericsList(){ return [...new Set(Object.values(S.products).map(p => p.generic).concat(S.purchases.map(p => p.generic)).filter(Boolean).map(s => s.trim()))].sort((a,b) => a.localeCompare(b,'fr')); }
+function storesList(){ return [...new Set(S.purchases.map(p => p.store).filter(Boolean))].sort((a,b) => a.localeCompare(b,'fr')); }
+function datalists(){ return `<datalist id="generics">${genericsList().map(g => `<option value="${esc(g)}">`).join('')}</datalist><datalist id="stores">${storesList().map(g => `<option value="${esc(g)}">`).join('')}</datalist>`; }
+
+/* ---------- Navigation ---------- */
+let view = 'stock';
+function go(v){ view = v; render(); window.scrollTo(0,0); }
+function render(){
+  const views = {stock:renderStock, add:renderAdd, ticket:renderTicket, prices:renderPrices, settings:renderSettings};
+  $('#main').innerHTML = views[view]();
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+}
+
+/* ---------- Vue Stock ---------- */
+let sortMode = 'cat';
+function setSort(m){ sortMode = m; render(); }
+function hero(){
+  const st = S.settings, t = totals();
+  const need = st.people * st.kcal, days = need ? t.kcal / need : 0;
+  const wdays = st.people * st.water ? t.liters / (st.people * st.water) : 0;
+  const macro = t.pk + t.fk + t.ck;
+  const share = m => macro ? t[MK[m]] / macro * 100 : 0;
+  return `<section class="hero">
+    <div class="count"><span class="n">${fmt(Math.floor(days))}</span><span class="u">jour${days >= 2 ? 's' : ''}</span></div>
+    <p>de nourriture pour ${st.people} personne${st.people > 1 ? 's' : ''}, sur un objectif de ${st.targetDays} jours.</p>
+    <div class="track"><span style="width:${Math.min(100, st.targetDays ? days/st.targetDays*100 : 0)}%"></span></div>
+    <div class="facts">
+      <div><b>${fmt(wdays,1)} j</b><span>d'eau</span></div>
+      <div><b>${fmt(t.kcal)}</b><span>kcal en stock</span></div>
+    </div>
+    <div class="mbar">${MACROS.map(m => `<span style="width:${share(m)}%;background:${CATS[m].color}"></span>`).join('')}</div>
+    <div class="mleg">${MACROS.map(m => `<div><i style="background:${CATS[m].color}"></i>${CATS[m].label}<br><b>${fmt(share(m))} %</b> pour ${num(st.split[m])} % visés</div>`).join('')}</div>
+    ${t.missing ? `<p class="note">${t.missing} produit${t.missing>1?'s':''} sans calories renseignées : ${t.missing>1?'ils ne comptent':'il ne compte'} pas encore.</p>` : ''}
+  </section>`;
+}
+function lotRow(it){
+  const p = S.products[it.productKey] || {name:'Produit inconnu'};
+  const s = status(it), st = itemStats(it);
+  const meta = [];
+  if(num(p.weightG)) meta.push(fmt(num(p.weightG)) + (p.category === 'eau' ? ' ml' : ' g'));
+  if(st.kcal) meta.push(fmt(st.kcal) + ' kcal au total');
+  if(p.brand) meta.push(esc(p.brand));
+  return `<li class="lot ${s.cls}">
+    <div class="lotmain" onclick="editLot('${it.id}')">
+      <div class="nm"><span class="cattag" style="background:${(CATS[p.category]||CATS.autre).color}"></span>${esc(p.name)}</div>
+      <div class="meta">${meta.join(', ')}</div>
+      <div class="dt">${esc(s.txt)}</div>
+    </div>
+    <div class="qty"><button aria-label="Consommer une unité" onclick="consume('${it.id}')">−</button><span>${it.qty}</span><button aria-label="Ajouter une unité" onclick="bump('${it.id}')">+</button></div>
+  </li>`;
+}
+function shopping(){
+  const st = S.settings, t = totals(), total = st.people * st.kcal * st.targetDays, out = [];
+  for(const m of MACROS){
+    const def = total * num(st.split[m]) / 100 - t[MK[m]];
+    if(def <= 0) continue;
+    let best = null;
+    for(const p of Object.values(S.products)){
+      if(p.category !== m) continue;
+      const [f,k] = MF[m], per = num(p[f]) * k * num(p.weightG) / 100;
+      if(!per) continue;
+      const price = unitPriceFor(p), cost = price ? price / per : null;
+      if(!best || (cost != null && (best.cost == null || cost < best.cost)) || (cost == null && best.cost == null && per > best.per)) best = {p, per, price, cost};
+    }
+    let txt = `<b>${CATS[m].label}</b> : il manque environ ${fmt(def)} kcal.`;
+    if(best){ const n = Math.ceil(def / best.per); txt += ` Soit ${n} × ${esc(best.p.name)}${best.price ? `, environ ${eur(n*best.price)}` : ''}.`; }
+    out.push(txt);
+  }
+  const wdef = st.people * st.water * st.targetDays - t.liters;
+  if(wdef > 0) out.push(`<b>Eau</b> : il manque ${fmt(wdef)} litres.`);
+  if(!out.length) return '';
+  return `<h2>Pour tenir ${st.targetDays} jours</h2><div class="card"><ul class="shop">${out.map(x => `<li>${x}</li>`).join('')}</ul>
+    <p class="hint">Suggestion basée sur le produit le moins cher par calorie parmi tes achats.</p></div>`;
+}
+function renderStock(){
+  const items = S.items.filter(i => i.qty > 0);
+  if(!items.length) return hero() + `<div class="empty"><h2>Stock vide</h2><p>Scanne ta première conserve pour démarrer l'inventaire.</p><button class="btn primary" onclick="go('add')">Ajouter un produit</button></div>`;
+  let html = hero();
+  html += `<div class="seg" role="group" aria-label="Trier"><button class="${sortMode==='cat'?'on':''}" onclick="setSort('cat')">Par catégorie</button><button class="${sortMode==='date'?'on':''}" onclick="setSort('date')">Par date</button></div>`;
+  const byDate = (a,b) => (a.date||'9999').localeCompare(b.date||'9999');
+  if(sortMode === 'date'){
+    html += `<ul>${items.slice().sort(byDate).map(lotRow).join('')}</ul>`;
+  } else {
+    const prio = items.filter(i => status(i).rank <= 2).sort(byDate);
+    if(prio.length) html += `<div class="catblock"><div class="cath" style="color:var(--soon)"><h2>À consommer en priorité</h2><span>${prio.length} lot${prio.length>1?'s':''}</span></div><ul>${prio.map(lotRow).join('')}</ul></div>`;
+    for(const c of Object.keys(CATS)){
+      const l = items.filter(i => (S.products[i.productKey]||{}).category === c).sort(byDate);
+      if(!l.length) continue;
+      const kc = l.reduce((s,i) => s + (isDead(i) ? 0 : itemStats(i).kcal), 0);
+      const lit = l.reduce((s,i) => s + itemStats(i).liters, 0);
+      const sub = c === 'eau' ? `${fmt(lit,1)} L` : (kc ? `${fmt(kc)} kcal` : `${l.length} lot${l.length>1?'s':''}`);
+      html += `<div class="catblock"><div class="cath" style="color:${CATS[c].color}"><h2>${CATS[c].label}</h2><span>${sub}</span></div><ul>${l.map(lotRow).join('')}</ul></div>`;
+    }
+  }
+  return html + shopping();
+}
+function consume(id){ const it = S.items.find(i => i.id === id); if(!it) return; it.qty--; if(it.qty <= 0){ S.items = S.items.filter(i => i.id !== id); toast('Lot terminé, retiré du stock'); } save(); render(); }
+function bump(id){ const it = S.items.find(i => i.id === id); if(!it) return; it.qty++; save(); render(); }
+
+/* ---------- Vue Ajouter ---------- */
+let draft = null, loading = false;
+function emptyDraft(){ return {lotId:null, productKey:'', barcode:'', name:'', brand:'', generic:'', category:'glucides', weightG:'', kcal100:'', p100:'', f100:'', c100:'', qty:1, dateType:'DDM', date:'', price:'', store:'', image:'', catTouched:false}; }
+function editLot(id){
+  const it = S.items.find(i => i.id === id); if(!it) return;
+  const p = S.products[it.productKey] || {};
+  draft = {...emptyDraft(), ...p, productKey:it.productKey, lotId:id, qty:it.qty, dateType:it.dateType, date:it.date, catTouched:true};
+  go('add');
+}
+function manualDraft(){ draft = emptyDraft(); render(); }
+function setDT(t){ draft.dateType = t; render(); }
+function cancelDraft(){ draft = null; render(); }
+function renderAdd(){
+  if(loading) return `<div class="loading"><div class="spin"></div><p>Recherche du produit…</p></div>`;
+  if(!draft) return `<h1>Ajouter au stock</h1>
+    <div class="stack">
+      <button class="btn primary big" onclick="openScanner()">Scanner un code-barres</button>
+      <div class="codeline"><input id="code" inputmode="numeric" placeholder="Ou tape le code-barres" aria-label="Code-barres"><button class="btn" onclick="lookup($('#code').value)">Chercher</button></div>
+      <button class="btn" onclick="manualDraft()">Produit sans code-barres</button>
+    </div>
+    <p class="hint">Les fiches produits viennent d'Open Food Facts. Si un produit est inconnu, tu le complètes une fois et l'app le retient.</p>`;
+  const d = draft, edit = !!d.lotId;
+  return `<h1>${edit ? 'Modifier le lot' : 'Nouveau lot'}</h1>
+  <div class="form">
+    ${d.image || d.barcode ? `<div class="prod-head">${d.image ? `<img src="${esc(d.image)}" alt="">` : ''}<span class="hint">${d.barcode ? 'Code ' + esc(d.barcode) : ''}</span></div>` : ''}
+    <label>Nom du produit<input data-f="name" value="${esc(d.name)}"></label>
+    <div class="g2"><label>Marque<input data-f="brand" value="${esc(d.brand)}"></label>
+    <label>Type, pour comparer les prix<input data-f="generic" list="generics" value="${esc(d.generic)}" placeholder="ex. Thon au naturel"></label></div>
+    <div class="g2"><label>Catégorie<select data-f="category">${catOptions(d.category)}</select></label>
+    <label>Poids net (g ou ml)<input data-f="weightG" inputmode="decimal" value="${esc(d.weightG)}"></label></div>
+    <label>Kcal pour 100 g<input data-f="kcal100" inputmode="decimal" value="${esc(d.kcal100)}"></label>
+    <div class="g3"><label>Protéines /100 g<input data-f="p100" inputmode="decimal" value="${esc(d.p100)}"></label>
+    <label>Lipides /100 g<input data-f="f100" inputmode="decimal" value="${esc(d.f100)}"></label>
+    <label>Glucides /100 g<input data-f="c100" inputmode="decimal" value="${esc(d.c100)}"></label></div>
+    <div class="g2"><label>Quantité<input data-f="qty" inputmode="numeric" value="${esc(d.qty)}"></label>
+    <label>Date sur l'emballage<input data-f="date" type="date" value="${esc(d.date)}"></label></div>
+    <div><div class="seg" style="margin:.2rem 0"><button class="${d.dateType==='DDM'?'on':''}" onclick="setDT('DDM')">DDM, à consommer de préférence</button><button class="${d.dateType==='DLC'?'on':''}" onclick="setDT('DLC')">DLC, à consommer jusqu'au</button></div>
+    <p class="hint">Les conserves portent presque toujours une DDM : elles restent consommables après la date.</p></div>
+    ${edit ? '' : `<div class="g2"><label>Prix payé pour ce lot (TTC, facultatif)<input data-f="price" inputmode="decimal" value="${esc(d.price)}"></label>
+    <label>Enseigne<input data-f="store" list="stores" value="${esc(d.store)}"></label></div>`}
+  </div>
+  <div class="actions"><button class="btn" onclick="cancelDraft()">Annuler</button><button class="btn primary" onclick="saveDraft()">Enregistrer</button></div>
+  ${edit ? `<div class="actions"><button class="btn danger" onclick="deleteLot()">Supprimer ce lot</button></div>` : ''}
+  ${datalists()}`;
+}
+function saveDraft(){
+  const d = draft;
+  if(!String(d.name).trim()) return toast('Indique au moins le nom du produit');
+  const key = d.barcode || d.productKey || ('m-' + uid());
+  const prev = S.products[key] || {};
+  S.products[key] = {...prev, key, barcode:d.barcode||'', name:String(d.name).trim(), brand:String(d.brand||'').trim(), generic:String(d.generic||d.name).trim(), category:d.category,
+    weightG:num(d.weightG), kcal100:num(d.kcal100), p100:num(d.p100), f100:num(d.f100), c100:num(d.c100), image:d.image||prev.image||''};
+  const qty = Math.max(1, parseInt(d.qty) || 1);
+  if(d.lotId){
+    const it = S.items.find(i => i.id === d.lotId);
+    if(it) Object.assign(it, {productKey:key, qty, dateType:d.dateType, date:d.date});
+  } else {
+    const same = S.items.find(i => i.productKey === key && i.date === d.date && i.dateType === d.dateType);
+    if(same) same.qty += qty;
+    else S.items.push({id:uid(), productKey:key, qty, dateType:d.dateType, date:d.date, addedAt:todayLocal()});
+    if(num(d.price) > 0) S.purchases.push({id:uid(), productKey:key, label:S.products[key].name, name:S.products[key].name, generic:S.products[key].generic,
+      category:d.category, store:String(d.store||'').trim() || 'Non précisée', date:todayLocal(), qty, total:round2(num(d.price)), weightG:num(d.weightG), source:'manuel'});
+  }
+  save(); draft = null; toast('Lot enregistré'); go('stock');
+}
+function deleteLot(){ if(!confirm('Supprimer ce lot du stock ?')) return; S.items = S.items.filter(i => i.id !== draft.lotId); draft = null; save(); go('stock'); }
+
+/* Scanner */
+let scanner = null, scanned = false;
+async function openScanner(){
+  if(!window.Html5Qrcode) return toast('Lecteur indisponible sans réseau : tape le code à la main.');
+  $('#scan').hidden = false; scanned = false;
+  const F = Html5QrcodeSupportedFormats;
+  scanner = new Html5Qrcode('reader', {formatsToSupport:[F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], experimentalFeatures:{useBarCodeDetectorIfSupported:true}, verbose:false});
+  try{
+    await scanner.start({facingMode:'environment'}, {fps:10, qrbox:(w,h) => ({width:Math.floor(Math.min(320, w*0.85)), height:150})},
+      code => { if(scanned) return; scanned = true; closeScanner(); lookup(code); }, () => {});
+  }catch(e){ closeScanner(); toast("Caméra inaccessible. Autorise l'accès à la caméra pour ce site dans les réglages."); }
+}
+async function closeScanner(){
+  $('#scan').hidden = true;
+  if(scanner){ const s = scanner; scanner = null; try{ await s.stop(); }catch(e){} try{ s.clear(); }catch(e){} }
+}
+async function lookup(code){
+  code = String(code||'').replace(/\D/g,'');
+  if(code.length < 6) return toast('Code-barres invalide');
+  if(S.products[code]){ draft = {...emptyDraft(), ...S.products[code], productKey:code, barcode:code, catTouched:true}; toast('Produit déjà connu'); go('add'); return; }
+  draft = {...emptyDraft(), barcode:code}; loading = true; go('add');
+  try{
+    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_fr,generic_name_fr,brands,product_quantity,nutriments,image_front_small_url,categories_tags`);
+    const j = await r.json();
+    if(j.status === 1 && j.product){
+      const p = j.product, n = p.nutriments || {};
+      Object.assign(draft, {name:p.product_name_fr || p.product_name || '', brand:(p.brands||'').split(',')[0].trim(), generic:p.generic_name_fr || '',
+        weightG:p.product_quantity || '', kcal100:n['energy-kcal_100g'] ?? '', p100:n.proteins_100g ?? '', f100:n.fat_100g ?? '', c100:n.carbohydrates_100g ?? '', image:p.image_front_small_url || ''});
+      draft.category = guessCat(num(draft.p100), num(draft.f100), num(draft.c100), p.categories_tags || []);
+      toast('Produit trouvé, vérifie la fiche');
+    } else toast("Produit inconnu d'Open Food Facts : complète la fiche, elle sera retenue.");
+  }catch(e){ toast('Pas de réseau : complète la fiche à la main.'); }
+  loading = false; render();
+}
+
+/* ---------- Vue Ticket ---------- */
+let ticket = null;
+function renderTicket(){
+  if(!ticket){
+    const recent = {};
+    for(const p of S.purchases.filter(p => p.source === 'ticket')){ const k = p.store + '|' + p.date; (recent[k] ??= {store:p.store, date:p.date, n:0, total:0}); recent[k].n++; recent[k].total += p.total; }
+    const list = Object.values(recent).sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
+    return `<h1>Ticket de caisse</h1>
+    <p class="lead">Photographie ton ticket à plat et bien éclairé. Pour un long ticket, prends-le en deux ou trois photos et sélectionne-les ensemble.</p>
+    <div class="stack"><label class="btn primary big">Photographier le ticket<input type="file" accept="image/*" multiple hidden onchange="onReceipt(this.files)"></label></div>
+    ${!S.settings.apiKey ? `<p class="warn">Ajoute d'abord ta clé API dans Réglages.</p>` : ''}
+    ${list.length ? `<h2>Derniers tickets</h2><ul class="hist">${list.map(x => `<li><span>${esc(x.store)}, ${fdate(x.date)}</span><span class="num">${x.n} art., ${eur(x.total)}</span></li>`).join('')}</ul>` : ''}`;
+  }
+  if(ticket.loading) return `<div class="loading"><div class="spin"></div><p>Lecture du ticket…</p></div>`;
+  if(ticket.error) return `<h1>Lecture impossible</h1><p class="warn">${esc(ticket.error)}</p><div class="actions"><button class="btn primary" onclick="ticket=null;render()">Réessayer</button></div>`;
+  const tk = ticket, n = tk.lines.filter(l => l.keep).length;
+  return `<h1>Vérifie le ticket</h1>
+  <div class="card form">
+    <div class="g2"><label>Enseigne<input data-tk="store" list="stores" value="${esc(tk.store)}"></label>
+    <label>Date d'achat<input type="date" data-tk="date" value="${esc(tk.date)}"></label></div>
+    <label class="check"><input type="checkbox" data-tk="pricesHT" ${tk.pricesHT ? 'checked' : ''}> Prix affichés hors taxes (Metro, Promocash) : ajouter la TVA</label>
+  </div>
+  <ul class="lines">${tk.lines.map(lineCard).join('')}</ul>
+  <div class="actions sticky"><button class="btn" onclick="if(confirm('Abandonner ce ticket ?')){ticket=null;render()}">Annuler</button><button class="btn primary" onclick="saveTicket()">Enregistrer ${n} achat${n>1?'s':''}</button></div>
+  ${datalists()}`;
+}
+function productOptions(sel){ return Object.values(S.products).sort((a,b) => a.name.localeCompare(b.name,'fr')).map(p => `<option value="${esc(p.key)}" ${p.key===sel?'selected':''}>${esc(p.name)}</option>`).join(''); }
+function lineCalc(l){
+  const ttc = ticket.pricesHT ? num(l.total) * (1 + num(l.vat)/100) : num(l.total);
+  const w = num(l.weightG) * num(l.qty);
+  return `${eur(ttc)} TTC${w ? `, soit ${eur(ttc/(w/1000))}${unitOf(l.category)}` : ', poids inconnu'}`;
+}
+function lineCard(l){
+  const id = l.id;
+  return `<li class="line ${l.keep ? '' : 'off'}">
+    <label class="check"><input type="checkbox" data-ln="${id}:keep" ${l.keep ? 'checked' : ''}><span class="raw">${esc(l.label)}</span></label>
+    <div class="g2"><label>Nom<input data-ln="${id}:name" value="${esc(l.name)}"></label>
+    <label>Type, pour comparer<input data-ln="${id}:generic" list="generics" value="${esc(l.generic)}"></label></div>
+    <div class="g4"><label>Qté<input inputmode="decimal" data-ln="${id}:qty" value="${esc(l.qty)}"></label>
+    <label>Total €${ticket.pricesHT ? ' HT' : ''}<input inputmode="decimal" data-ln="${id}:total" value="${esc(l.total)}"></label>
+    <label>g ou ml / unité<input inputmode="decimal" data-ln="${id}:weightG" value="${esc(l.weightG)}"></label>
+    ${ticket.pricesHT ? `<label>TVA %<input inputmode="decimal" data-ln="${id}:vat" value="${esc(l.vat)}"></label>` : ''}</div>
+    <div class="g2"><label>Catégorie<select data-ln="${id}:category">${catOptions(l.category)}</select></label>
+    <label>Produit du stock<select data-ln="${id}:productKey"><option value="">Aucun</option>${productOptions(l.productKey)}</select></label></div>
+    <p class="calc" id="calc-${id}">${lineCalc(l)}</p>
+  </li>`;
+}
+function resizeImage(file, max){
+  return new Promise((ok, ko) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => ko(new Error("Image illisible. Reprends la photo au format JPEG ou PNG."));
+    img.src = url;
+  });
+}
+async function onReceipt(files){
+  if(!files || !files.length) return;
+  if(!S.settings.apiKey){ toast('Ajoute ta clé API dans Réglages'); go('settings'); return; }
+  ticket = {loading:true}; render();
+  try{
+    const imgs = []; for(const f of [...files].slice(0,4)) imgs.push(await resizeImage(f, 1568));
+    ticket = normalizeTicket(await callClaude(imgs));
+    if(!ticket.lines.length) ticket = {error:"Aucun article trouvé. Reprends la photo plus près, sans reflet."};
+  }catch(e){ ticket = {error: e.message || 'Erreur inconnue'}; }
+  render();
+}
+async function callClaude(imgs){
+  const known = genericsList().slice(0,200);
+  const prompt = `Tu lis un ticket de caisse français (${imgs.length} photo${imgs.length>1?'s':''} du même ticket, dans l'ordre). Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour :
+{"store":"nom de l'enseigne","date":"YYYY-MM-DD","prices_ht":false,"items":[{"label":"libellé exact imprimé","name":"nom lisible en français","generic":"type générique court","category":"proteines","qty":1,"unit_price":0,"total":0,"weight_g":null,"vat_rate":5.5}]}
+Règles :
+- prices_ht = true si les prix des lignes sont hors taxes (typique de Metro ou Promocash), sinon false.
+- total = montant payé pour la ligne, après remise éventuelle sur cette ligne. qty = nombre d'unités.
+- weight_g = poids net ou volume d'UNE unité en grammes ou millilitres, déduit du libellé (ex. "3X80G" donne 240 si l'unité est le lot, "1KG" donne 1000). null si impossible à déduire.
+- category parmi : proteines, lipides, glucides (selon le macronutriment dominant en calories), eau, hygiene, pharmacie, autre.
+- vat_rate : 5.5 pour l'alimentaire et l'eau, 20 pour l'alcool et le non-alimentaire, sauf si le ticket indique autre chose.
+- generic : nom court et réutilisable pour comparer entre marques et enseignes (ex. "Thon au naturel", "Riz long", "Huile d'olive"). Réutilise en priorité un de ces types existants s'il correspond : ${JSON.stringify(known)}.
+- Ignore les lignes de total, de paiement, de TVA récapitulative et les consignes.`;
+  let r;
+  try{
+    r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST',
+      headers:{'content-type':'application/json', 'x-api-key':S.settings.apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:S.settings.model, max_tokens:4096, messages:[{role:'user', content:[...imgs.map(d => ({type:'image', source:{type:'base64', media_type:'image/jpeg', data:d}})), {type:'text', text:prompt}]}]})});
+  }catch(e){ throw new Error("Pas de réseau. La lecture du ticket nécessite une connexion."); }
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok){
+    if(r.status === 401) throw new Error('Clé API refusée. Vérifie-la dans Réglages.');
+    throw new Error((j.error && j.error.message) || ('Erreur API ' + r.status));
+  }
+  const txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
+  if(a < 0) throw new Error('Réponse illisible. Réessaie avec une photo plus nette.');
+  try{ return JSON.parse(txt.slice(a, z+1)); }catch(e){ throw new Error('Réponse illisible. Réessaie avec une photo plus nette.'); }
+}
+function normalizeTicket(r){
+  const store = String(r.store || '').trim();
+  return {store, date:/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : todayLocal(),
+    pricesHT: !!r.prices_ht || /metro|promocash/i.test(store),
+    lines:(r.items || []).map(it => {
+      const cat = CATS[it.category] ? it.category : 'autre', qty = num(it.qty) || 1;
+      const link = Object.values(S.products).find(p => p.generic && sameGeneric(p.generic, it.generic));
+      return {id:uid(), keep:true, label:it.label || it.name || '', name:it.name || it.label || '', generic:it.generic || it.name || '', category:cat, qty,
+        total:round2(num(it.total) || num(it.unit_price)*qty), weightG:num(it.weight_g) || (link ? num(link.weightG) : '') || '',
+        vat:num(it.vat_rate) || (['hygiene','pharmacie','autre'].includes(cat) ? 20 : 5.5), productKey:link ? link.key : ''};
+    })};
+}
+function saveTicket(){
+  const tk = ticket, store = String(tk.store||'').trim() || 'Non précisée';
+  let n = 0;
+  for(const l of tk.lines){
+    if(!l.keep || !num(l.total)) continue;
+    const total = tk.pricesHT ? num(l.total) * (1 + num(l.vat)/100) : num(l.total);
+    S.purchases.push({id:uid(), productKey:l.productKey || null, label:l.label, name:l.name, generic:String(l.generic||l.name).trim(), category:l.category,
+      store, date:tk.date, qty:num(l.qty) || 1, total:round2(total), weightG:num(l.weightG), source:'ticket'});
+    n++;
+  }
+  save(); ticket = null; toast(`${n} achat${n>1?'s':''} enregistré${n>1?'s':''}`); go('prices');
+}
+
+/* ---------- Vue Prix ---------- */
+let pFilter = 'all', pOpen = new Set();
+function setPF(c){ pFilter = c; render(); }
+function togglePG(k){ pOpen.has(k) ? pOpen.delete(k) : pOpen.add(k); render(); }
+function spark(vals){
+  if(vals.length < 2) return '<svg width="72" height="22"></svg>';
+  const mn = Math.min(...vals), mx = Math.max(...vals), w = 72, h = 22, r = mx - mn || 1;
+  const pts = vals.map((v,i) => `${(i/(vals.length-1)*(w-4)+2).toFixed(1)},${(h-2-(v-mn)/r*(h-4)).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+}
+function renderPrices(){
+  if(!S.purchases.length) return `<h1>Prix</h1><div class="empty"><p>Aucun achat enregistré. Photographie un ticket ou indique le prix en ajoutant un produit.</p><button class="btn primary" onclick="go('ticket')">Photographier un ticket</button></div>`;
+  const groups = {};
+  for(const p of S.purchases){ const k = (p.generic || p.label || '?').trim().toLowerCase(); (groups[k] ??= {key:k, name:(p.generic || p.label), category:p.category, list:[]}).list.push(p); }
+  let gl = Object.values(groups).filter(g => pFilter === 'all' || g.category === pFilter).sort((a,b) => a.name.localeCompare(b.name,'fr'));
+  const cats = [...new Set(S.purchases.map(p => p.category))];
+  let html = `<h1>Prix</h1><div class="chips"><button class="${pFilter==='all'?'on':''}" onclick="setPF('all')">Tout</button>${Object.keys(CATS).filter(c => cats.includes(c)).map(c => `<button class="${pFilter===c?'on':''}" onclick="setPF('${c}')">${CATS[c].label}</button>`).join('')}</div><ul>`;
+  for(const g of gl){
+    const list = g.list.slice().sort((a,b) => a.date.localeCompare(b.date));
+    const withK = list.filter(p => ppk(p) != null);
+    const u = unitOf(g.category);
+    const last = list[list.length-1];
+    const main = withK.length ? `${eur(ppk(withK[withK.length-1]))}${u}` : eur(last.total / num(last.qty||1));
+    const stores = {};
+    for(const p of list){ const v = ppk(p); (stores[p.store] ??= {n:0, sum:0, cnt:0, last:p.date}); stores[p.store].n++; stores[p.store].last = p.date; if(v != null){ stores[p.store].sum += v; stores[p.store].cnt++; } }
+    const ranked = Object.entries(stores).filter(([,s]) => s.cnt).map(([k,s]) => [k, s.sum/s.cnt]).sort((a,b) => a[1]-b[1]);
+    const sub = [];
+    if(ranked.length > 1) sub.push(`Moins cher chez ${esc(ranked[0][0])}, ${eur(ranked[0][1])}${u} en moyenne`);
+    else sub.push(`${list.length} achat${list.length>1?'s':''}, dernier chez ${esc(last.store)}`);
+    if(withK.length >= 2){ const a = ppk(withK[0]), b = ppk(withK[withK.length-1]), ch = (b-a)/a*100;
+      if(Math.abs(ch) >= 1) sub.push(`<span class="${ch>0?'up':'down'}">${ch>0?'+':''}${fmt(ch)} % depuis le ${fdate(withK[0].date)}</span>`); }
+    const k1000 = list.map(per1000).filter(v => v != null);
+    if(k1000.length) sub.push(`meilleur prix pour 1000 kcal : ${eur(Math.min(...k1000))}`);
+    html += `<li class="pg"><button class="pgh" data-k="${esc(g.key)}" onclick="togglePG(this.dataset.k)" aria-expanded="${pOpen.has(g.key)}">
+      <span class="pn"><span class="cattag" style="background:${(CATS[g.category]||CATS.autre).color}"></span>${esc(g.name)}</span><span class="pv">${main}</span>
+      <span class="ps">${sub.join('. ')}.</span>${spark(withK.map(ppk))}</button>`;
+    if(pOpen.has(g.key)){
+      html += `<div class="pdet">${ranked.length ? `<table><tr><th>Enseigne</th><th class="r">Moyenne${u}</th><th class="r">Achats</th></tr>${ranked.map(([s,v]) => `<tr><td>${esc(s)}</td><td class="r">${eur(v)}</td><td class="r">${stores[s].n}</td></tr>`).join('')}</table>` : ''}
+      <table><tr><th>Date</th><th>Enseigne</th><th class="r">Payé</th><th class="r">${u}</th><th></th></tr>
+      ${list.slice().reverse().map(p => `<tr><td>${fdate(p.date)}</td><td>${esc(p.store)}</td><td class="r">${eur(p.total)}</td><td class="r">${ppk(p) != null ? eur(ppk(p)) : ''}</td><td class="r"><button class="del" aria-label="Supprimer cet achat" onclick="delPurchase('${p.id}')">×</button></td></tr>`).join('')}</table></div>`;
+    }
+    html += `</li>`;
+  }
+  return html + `</ul>`;
+}
+function delPurchase(id){ if(!confirm('Supprimer cet achat ?')) return; S.purchases = S.purchases.filter(p => p.id !== id); save(); render(); }
+
+/* ---------- Vue Réglages ---------- */
+function renderSettings(){
+  const s = S.settings, sum = MACROS.reduce((a,m) => a + num(s.split[m]), 0);
+  return `<h1>Réglages</h1>
+  <div class="form">
+    <h2>Foyer et objectif</h2>
+    <div class="g2"><label>Personnes<input data-s="people" inputmode="numeric" value="${s.people}"></label>
+    <label>Kcal par personne et par jour<input data-s="kcal" inputmode="numeric" value="${s.kcal}"></label></div>
+    <div class="g2"><label>Eau par personne et par jour (L)<input data-s="water" inputmode="decimal" value="${s.water}"></label>
+    <label>Objectif d'autonomie (jours)<input data-s="targetDays" inputmode="numeric" value="${s.targetDays}"></label></div>
+    <label>Alerte de péremption (semaines avant la date)<input data-s="alertWeeks" inputmode="numeric" value="${s.alertWeeks}"></label>
+    <h2>Répartition visée des calories</h2>
+    <div class="g3">${MACROS.map(m => `<label>${CATS[m].label} %<input data-split="${m}" inputmode="numeric" value="${s.split[m]}"></label>`).join('')}</div>
+    <p class="hint" id="splitsum">${sum === 100 ? 'Total : 100 %' : `<span class="warn">Total : ${sum} %, il faut arriver à 100 %.</span>`}</p>
+    <h2>Lecture des tickets</h2>
+    <label>Clé API Anthropic<input data-s="apiKey" type="password" autocomplete="off" value="${esc(s.apiKey)}" placeholder="sk-ant-..."></label>
+    <p class="hint">La clé reste sur ce téléphone, elle n'est jamais dans le code de l'app.</p>
+    <label>Modèle<select data-s="model">${MODELS.map(([v,l]) => `<option value="${v}" ${v===s.model?'selected':''}>${l}</option>`).join('')}</select></label>
+    <h2>Sauvegarde</h2>
+    <p class="hint">Tes données sont stockées sur ce téléphone uniquement. Exporte-les régulièrement.</p>
+    <div class="actions"><button class="btn" onclick="exportData()">Exporter</button>
+    <label class="btn">Importer<input type="file" accept="application/json,.json" hidden onchange="importData(this.files[0])"></label></div>
+    <p class="hint">${Object.keys(S.products).length} produits connus, ${S.items.length} lots, ${S.purchases.length} achats.</p>
+  </div>`;
+}
+async function exportData(){
+  const name = `reserve-${todayLocal()}.json`, blob = new Blob([JSON.stringify({...S, settings:{...S.settings, apiKey:''}}, null, 1)], {type:'application/json'});
+  const file = new File([blob], name, {type:'application/json'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:name}); return; }catch(e){ if(e.name === 'AbortError') return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function importData(file){
+  if(!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const d = merge(JSON.parse(rd.result));
+      if(!confirm(`Remplacer les données actuelles par ce fichier (${d.items.length} lots, ${d.purchases.length} achats) ?`)) return;
+      d.settings.apiKey = S.settings.apiKey; S = d; save(); toast('Données importées'); render();
+    }catch(e){ toast("Fichier illisible : choisis un export de l'app."); }
+  };
+  rd.readAsText(file);
+}
+
+/* ---------- Saisie ---------- */
+function onField(e){
+  const el = e.target, v = el.type === 'checkbox' ? el.checked : el.value;
+  if(el.dataset.f && draft){
+    const f = el.dataset.f; draft[f] = v;
+    if(f === 'category') draft.catTouched = true;
+    if(['p100','f100','c100'].includes(f) && !draft.catTouched){
+      draft.category = guessCat(num(draft.p100), num(draft.f100), num(draft.c100));
+      const sel = document.querySelector('[data-f=category]'); if(sel) sel.value = draft.category;
+    }
+  } else if(el.dataset.s){
+    const f = el.dataset.s; S.settings[f] = ['apiKey','model'].includes(f) ? String(v).trim() : num(v); save();
+  } else if(el.dataset.split){
+    S.settings.split[el.dataset.split] = num(v); save();
+    const sum = MACROS.reduce((a,m) => a + num(S.settings.split[m]), 0);
+    $('#splitsum').innerHTML = sum === 100 ? 'Total : 100 %' : `<span class="warn">Total : ${sum} %, il faut arriver à 100 %.</span>`;
+  } else if(el.dataset.tk && ticket){
+    ticket[el.dataset.tk] = v;
+    if(el.dataset.tk === 'pricesHT' && e.type === 'change') render();
+  } else if(el.dataset.ln && ticket){
+    const [id, f] = el.dataset.ln.split(':'); const l = ticket.lines.find(x => x.id === id); if(!l) return;
+    l[f] = v;
+    if(f === 'productKey' && v && S.products[v]){ const p = S.products[v]; if(!num(l.weightG)) l.weightG = num(p.weightG) || ''; if(p.generic) l.generic = p.generic; l.category = p.category; }
+    if(['keep','productKey','category'].includes(f)){ if(e.type === 'change') render(); return; }
+    const c = document.getElementById('calc-' + id); if(c) c.textContent = lineCalc(l);
+  }
+}
+document.addEventListener('input', onField);
+document.addEventListener('change', e => { if(e.target.matches('select, input[type=checkbox]')) onField(e); });
+
+if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+</script>
+</body>
+</html>
