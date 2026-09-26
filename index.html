@@ -71,7 +71,6 @@ input,select{width:100%;border:1.5px solid var(--line);background:var(--card);bo
 input:focus,select:focus{border-color:var(--ink);outline:none}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px}
 label.check{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;color:var(--text)}
 label.check input{width:22px;height:22px;flex:none;margin:0}
 .hint{font-size:.85rem;color:var(--mute)}
@@ -107,17 +106,9 @@ ul{list-style:none;margin:0;padding:0}
 .empty{text-align:center;padding:2rem 1rem}
 .empty p{color:var(--mute);margin-bottom:1rem}
 
-/* Ticket */
-.lines{display:grid;gap:10px;margin-top:1rem}
-.line{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
-.line.off{opacity:.45}
-.line.off .g2,.line.off .g4{display:none}
-.raw{font-family:var(--cond);font-weight:600;font-size:1.05rem;letter-spacing:.02em}
-.calc{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
 .loading{text-align:center;padding:3rem 1rem;color:var(--mute)}
 .spin{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--ink);border-radius:50%;margin:0 auto 1rem;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.hist li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:.95rem}
 
 /* Prix */
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;margin:0 -16px;padding-left:16px;padding-right:16px}
@@ -159,7 +150,6 @@ nav button.on{color:var(--paper);background:var(--ink2)}
 <nav aria-label="Navigation">
   <button data-v="stock" onclick="go('stock')">Stock</button>
   <button data-v="add" onclick="go('add')">Ajouter</button>
-  <button data-v="ticket" onclick="go('ticket')">Ticket</button>
   <button data-v="recipes" onclick="go('recipes')">Recettes</button>
   <button data-v="prices" onclick="go('prices')">Prix</button>
   <button data-v="settings" onclick="go('settings')">Réglages</button>
@@ -283,26 +273,24 @@ function unitPriceFor(prod){
 }
 function genericsList(){ return [...new Set(Object.values(S.products).map(p => p.generic).concat(S.purchases.map(p => p.generic)).filter(Boolean).map(s => s.trim()))].sort((a,b) => a.localeCompare(b,'fr')); }
 function datalists(){ return `<datalist id="generics">${genericsList().map(g => `<option value="${esc(g)}">`).join('')}</datalist>`; }
-function storeSelect(target, value, other){
+function storeSelect(value, other){
   const showOther = other || (value && !STORES.includes(value));
   const selVal = showOther ? 'Autre' : value;
   const opts = ['', ...STORES, 'Autre'].map(o => `<option value="${esc(o)}" ${o===selVal?'selected':''}>${o||'Choisir…'}</option>`).join('');
-  return `<select onchange="setStore('${target}', this.value)">${opts}</select>${showOther ? `<input style="margin-top:6px" placeholder="Nom de l'enseigne" value="${esc(value)}" oninput="setStoreOther('${target}', this.value)">` : ''}`;
+  return `<select onchange="setStore(this.value)">${opts}</select>${showOther ? `<input style="margin-top:6px" placeholder="Nom de l'enseigne" value="${esc(value)}" oninput="draft.store=this.value">` : ''}`;
 }
-function storeTarget(t){ return t === 'tk' ? ticket : draft; }
-function setStore(t, v){
-  const obj = storeTarget(t); if(!obj) return;
-  if(v === 'Autre'){ obj.storeOther = true; if(STORES.includes(obj.store)) obj.store = ''; }
-  else { obj.storeOther = false; obj.store = v; }
+function setStore(v){
+  if(!draft) return;
+  if(v === 'Autre'){ draft.storeOther = true; if(STORES.includes(draft.store)) draft.store = ''; }
+  else { draft.storeOther = false; draft.store = v; }
   render();
 }
-function setStoreOther(t, v){ const obj = storeTarget(t); if(obj) obj.store = v; }
 
 /* ---------- Navigation ---------- */
 let view = 'stock';
 function go(v){ view = v; render(); window.scrollTo(0,0); }
 function render(){
-  const views = {stock:renderStock, add:renderAdd, ticket:renderTicket, recipes:renderRecipes, prices:renderPrices, settings:renderSettings};
+  const views = {stock:renderStock, add:renderAdd, recipes:renderRecipes, prices:renderPrices, settings:renderSettings};
   $('#main').innerHTML = views[view]();
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
 }
@@ -432,7 +420,7 @@ function renderAdd(){
     <div><div class="seg" style="margin:.2rem 0"><button class="${d.dateType==='DDM'?'on':''}" onclick="setDT('DDM')">DDM, à consommer de préférence</button><button class="${d.dateType==='DLC'?'on':''}" onclick="setDT('DLC')">DLC, à consommer jusqu'au</button></div>
     <p class="hint">Les conserves portent presque toujours une DDM : elles restent consommables après la date.</p></div>
     ${edit ? '' : `<div class="g2"><label>Prix payé pour ce lot (TTC, facultatif)<input data-f="price" inputmode="decimal" value="${esc(d.price)}"></label>
-    <label>Enseigne${storeSelect('f', d.store, d.storeOther)}</label></div>`}
+    <label>Enseigne${storeSelect(d.store, d.storeOther)}</label></div>`}
   </div>
   <div class="actions"><button class="btn" onclick="cancelDraft()">Annuler</button><button class="btn primary" onclick="saveDraft()">Enregistrer</button></div>
   ${edit ? `<div class="actions"><button class="btn danger" onclick="deleteLot()">Supprimer ce lot</button></div>` : ''}
@@ -495,75 +483,6 @@ async function lookup(code){
   loading = false; render();
 }
 
-/* ---------- Vue Ticket ---------- */
-let ticket = null;
-function renderTicket(){
-  if(!ticket){
-    const recent = {};
-    for(const p of S.purchases.filter(p => p.source === 'ticket')){ const k = p.store + '|' + p.date; (recent[k] ??= {store:p.store, date:p.date, n:0, total:0}); recent[k].n++; recent[k].total += p.total; }
-    const list = Object.values(recent).sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
-    return `<h1>Ticket de caisse</h1>
-    <p class="lead">Photographie ton ticket à plat et bien éclairé. Pour un long ticket, prends-le en deux ou trois photos et sélectionne-les ensemble.</p>
-    <div class="stack"><label class="btn primary big">Photographier le ticket<input type="file" accept="image/*" multiple hidden onchange="onReceipt(this.files)"></label></div>
-    ${!S.settings.apiKey ? `<p class="warn">Ajoute d'abord ta clé API dans Réglages.</p>` : ''}
-    ${list.length ? `<h2>Derniers tickets</h2><ul class="hist">${list.map(x => `<li><span>${esc(x.store)}, ${fdate(x.date)}</span><span class="num">${x.n} art., ${eur(x.total)}</span></li>`).join('')}</ul>` : ''}`;
-  }
-  if(ticket.loading) return `<div class="loading"><div class="spin"></div><p>Lecture du ticket…</p></div>`;
-  if(ticket.error) return `<h1>Lecture impossible</h1><p class="warn">${esc(ticket.error)}</p><div class="actions"><button class="btn primary" onclick="ticket=null;render()">Réessayer</button></div>`;
-  const tk = ticket, n = tk.lines.filter(l => l.keep).length;
-  return `<h1>Vérifie le ticket</h1>
-  <div class="card form">
-    <div class="g2"><label>Enseigne${storeSelect('tk', tk.store, tk.storeOther)}</label>
-    <label>Date d'achat<input type="date" data-tk="date" value="${esc(tk.date)}"></label></div>
-  </div>
-  <ul class="lines">${tk.lines.map(lineCard).join('')}</ul>
-  <div class="actions sticky"><button class="btn" onclick="if(confirm('Abandonner ce ticket ?')){ticket=null;render()}">Annuler</button><button class="btn primary" onclick="saveTicket()">Enregistrer ${n} achat${n>1?'s':''}</button></div>
-  ${datalists()}`;
-}
-function productOptions(sel){ return Object.values(S.products).sort((a,b) => a.name.localeCompare(b.name,'fr')).map(p => `<option value="${esc(p.key)}" ${p.key===sel?'selected':''}>${esc(p.name)}</option>`).join(''); }
-function lineCalc(l){
-  const ttc = num(l.total);
-  const w = num(l.weightG) * num(l.qty);
-  return `${eur(ttc)} TTC${w ? `, soit ${eur(ttc/(w/1000))}${unitOf(l.category)}` : ', poids inconnu'}`;
-}
-function lineCard(l){
-  const id = l.id;
-  return `<li class="line ${l.keep ? '' : 'off'}">
-    <label class="check"><input type="checkbox" data-ln="${id}:keep" ${l.keep ? 'checked' : ''}><span class="raw">${esc(l.label)}</span></label>
-    <div class="g2"><label>Nom<input data-ln="${id}:name" value="${esc(l.name)}"></label>
-    <label>Type, pour comparer<input data-ln="${id}:generic" list="generics" value="${esc(l.generic)}"></label></div>
-    <div class="g3"><label>Qté<input inputmode="decimal" data-ln="${id}:qty" value="${esc(l.qty)}"></label>
-    <label>Total € TTC<input inputmode="decimal" data-ln="${id}:total" value="${esc(l.total)}"></label>
-    <label>g ou ml / unité<input inputmode="decimal" data-ln="${id}:weightG" value="${esc(l.weightG)}"></label></div>
-    <div class="g2"><label>Catégorie<select data-ln="${id}:category">${catOptions(l.category)}</select></label>
-    <label>Produit du stock<select data-ln="${id}:productKey"><option value="">Aucun</option>${productOptions(l.productKey)}</select></label></div>
-    <p class="calc" id="calc-${id}">${lineCalc(l)}</p>
-  </li>`;
-}
-function resizeImage(file, max){
-  return new Promise((ok, ko) => {
-    const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => {
-      const s = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement('canvas'); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-      ok(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
-    };
-    img.onerror = () => ko(new Error("Image illisible. Reprends la photo au format JPEG ou PNG."));
-    img.src = url;
-  });
-}
-async function onReceipt(files){
-  if(!files || !files.length) return;
-  if(!S.settings.apiKey){ toast('Ajoute ta clé API dans Réglages'); go('settings'); return; }
-  ticket = {loading:true}; render();
-  try{
-    const imgs = []; for(const f of [...files].slice(0,4)) imgs.push(await resizeImage(f, 1568));
-    ticket = normalizeTicket(await callClaude(imgs));
-    if(!ticket.lines.length) ticket = {error:"Aucun article trouvé. Reprends la photo plus près, sans reflet."};
-  }catch(e){ ticket = {error: e.message || 'Erreur inconnue'}; }
-  render();
-}
 async function claudeJSON(content, netErr){
   let r;
   try{
@@ -580,41 +499,6 @@ async function claudeJSON(content, netErr){
   const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
   if(a < 0) throw new Error('Réponse illisible. Réessaie.');
   try{ return JSON.parse(txt.slice(a, z+1)); }catch(e){ throw new Error('Réponse illisible. Réessaie.'); }
-}
-async function callClaude(imgs){
-  const known = genericsList().slice(0,200);
-  const prompt = `Tu lis un ticket de caisse français (${imgs.length} photo${imgs.length>1?'s':''} du même ticket, dans l'ordre). Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour :
-{"store":"nom de l'enseigne","date":"YYYY-MM-DD","items":[{"label":"libellé exact imprimé","name":"nom lisible en français","generic":"type générique court","category":"proteines","qty":1,"unit_price":0,"total":0,"weight_g":null}]}
-Règles :
-- total = montant payé TTC pour la ligne, après remise éventuelle sur cette ligne. qty = nombre d'unités.
-- weight_g = poids net ou volume d'UNE unité en grammes ou millilitres, déduit du libellé (ex. "3X80G" donne 240 si l'unité est le lot, "1KG" donne 1000). null si impossible à déduire.
-- category parmi : proteines, lipides, glucides (selon le macronutriment dominant en calories), eau, hygiene, pharmacie, autre.
-- generic : nom court et réutilisable pour comparer entre marques et enseignes (ex. "Thon au naturel", "Riz long", "Huile d'olive"). Réutilise en priorité un de ces types existants s'il correspond : ${JSON.stringify(known)}.
-- Ignore les lignes de total, de paiement, de TVA récapitulative et les consignes.`;
-  return claudeJSON([...imgs.map(d => ({type:'image', source:{type:'base64', media_type:'image/jpeg', data:d}})), {type:'text', text:prompt}],
-    "Pas de réseau. La lecture du ticket nécessite une connexion.");
-}
-function normalizeTicket(r){
-  const store = normalizeStore(r.store);
-  return {store, storeOther: !!store && !STORES.includes(store), date:/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : todayLocal(),
-    lines:(r.items || []).map(it => {
-      const cat = CATS[it.category] ? it.category : 'autre', qty = num(it.qty) || 1;
-      const link = Object.values(S.products).find(p => p.generic && sameGeneric(p.generic, it.generic));
-      return {id:uid(), keep:true, label:it.label || it.name || '', name:it.name || it.label || '', generic:it.generic || it.name || '', category:cat, qty,
-        total:round2(num(it.total) || num(it.unit_price)*qty), weightG:num(it.weight_g) || (link ? num(link.weightG) : '') || '',
-        productKey:link ? link.key : ''};
-    })};
-}
-function saveTicket(){
-  const tk = ticket, store = String(tk.store||'').trim() || 'Non précisée';
-  let n = 0;
-  for(const l of tk.lines){
-    if(!l.keep || !num(l.total)) continue;
-    S.purchases.push({id:uid(), productKey:l.productKey || null, label:l.label, name:l.name, generic:String(l.generic||l.name).trim(), category:l.category,
-      store, date:tk.date, qty:num(l.qty) || 1, total:round2(num(l.total)), weightG:num(l.weightG), source:'ticket'});
-    n++;
-  }
-  save(); ticket = null; toast(`${n} achat${n>1?'s':''} enregistré${n>1?'s':''}`); go('prices');
 }
 
 /* ---------- Vue Recettes ---------- */
@@ -714,7 +598,7 @@ function renderRecipes(){
   if(recipes && recipes.list) return `<h1>Recettes</h1><div class="actions"><button class="btn" onclick="recipes=null;render()">Nouvelles options</button></div>${recipes.list.map(recipeCard).join('')}`;
   const o = recipeOpts;
   return `<h1>Recettes</h1>
-  <p class="lead">Génère des idées de recettes à partir de ton stock, via l'API Anthropic (même clé que pour les tickets, appel depuis ce téléphone).</p>
+  <p class="lead">Génère des idées de recettes à partir de ton stock, via l'API Anthropic, appel depuis ce téléphone.</p>
   ${!S.settings.apiKey ? `<p class="warn">Ajoute d'abord ta clé API dans Réglages.</p>` : ''}
   <div class="form card">
     <label>Nombre de personnes<input inputmode="numeric" value="${o.people}" oninput="recipeOpts.people=num(this.value)||1"></label>
@@ -736,7 +620,7 @@ function spark(vals){
   return `<svg width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
 }
 function renderPrices(){
-  if(!S.purchases.length) return `<h1>Prix</h1><div class="empty"><p>Aucun achat enregistré. Photographie un ticket ou indique le prix en ajoutant un produit.</p><button class="btn primary" onclick="go('ticket')">Photographier un ticket</button></div>`;
+  if(!S.purchases.length) return `<h1>Prix</h1><div class="empty"><p>Aucun achat enregistré. Indique le prix payé en ajoutant un produit au stock.</p><button class="btn primary" onclick="go('add')">Ajouter un produit</button></div>`;
   const groups = {};
   for(const p of S.purchases){ const k = (p.generic || p.label || '?').trim().toLowerCase(); (groups[k] ??= {key:k, name:(p.generic || p.label), category:p.category, list:[]}).list.push(p); }
   let gl = Object.values(groups).filter(g => pFilter === 'all' || g.category === pFilter).sort((a,b) => a.name.localeCompare(b.name,'fr'));
@@ -786,9 +670,9 @@ function renderSettings(){
     <h2>Répartition visée des calories</h2>
     <div class="g3">${MACROS.map(m => `<label>${CATS[m].label} %<input data-split="${m}" inputmode="numeric" value="${s.split[m]}"></label>`).join('')}</div>
     <p class="hint" id="splitsum">${sum === 100 ? 'Total : 100 %' : `<span class="warn">Total : ${sum} %, il faut arriver à 100 %.</span>`}</p>
-    <h2>Lecture des tickets</h2>
+    <h2>Recettes (IA)</h2>
     <label>Clé API Anthropic<input data-s="apiKey" type="password" autocomplete="off" value="${esc(s.apiKey)}" placeholder="sk-ant-..."></label>
-    <p class="hint">La clé reste sur ce téléphone, elle n'est jamais dans le code de l'app.</p>
+    <p class="hint">Utilisée uniquement pour générer des recettes. La clé reste sur ce téléphone, elle n'est jamais dans le code de l'app.</p>
     <label>Modèle<select data-s="model">${MODELS.map(([v,l]) => `<option value="${v}" ${v===s.model?'selected':''}>${l}</option>`).join('')}</select></label>
     <h2>Sauvegarde</h2>
     <p class="hint">Tes données sont stockées sur ce téléphone uniquement. Exporte-les régulièrement.</p>
@@ -832,14 +716,6 @@ function onField(e){
     S.settings.split[el.dataset.split] = num(v); save();
     const sum = MACROS.reduce((a,m) => a + num(S.settings.split[m]), 0);
     $('#splitsum').innerHTML = sum === 100 ? 'Total : 100 %' : `<span class="warn">Total : ${sum} %, il faut arriver à 100 %.</span>`;
-  } else if(el.dataset.tk && ticket){
-    ticket[el.dataset.tk] = v;
-  } else if(el.dataset.ln && ticket){
-    const [id, f] = el.dataset.ln.split(':'); const l = ticket.lines.find(x => x.id === id); if(!l) return;
-    l[f] = v;
-    if(f === 'productKey' && v && S.products[v]){ const p = S.products[v]; if(!num(l.weightG)) l.weightG = num(p.weightG) || ''; if(p.generic) l.generic = p.generic; l.category = p.category; }
-    if(['keep','productKey','category'].includes(f)){ if(e.type === 'change') render(); return; }
-    const c = document.getElementById('calc-' + id); if(c) c.textContent = lineCalc(l);
   }
 }
 document.addEventListener('input', onField);
