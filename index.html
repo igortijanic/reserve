@@ -27,6 +27,7 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 main{max-width:640px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px 24px}
 h1{font:700 2rem/1.05 var(--cond);margin:.4rem 0 .6rem;letter-spacing:-.01em}
 h2{font:600 1.35rem/1.1 var(--cond);margin:1.4rem 0 .5rem}
+h3{font:600 1rem var(--body);margin:.9rem 0 .3rem;color:var(--mute)}
 p{margin:.3rem 0}
 .lead{color:var(--mute);max-width:36em}
 .num{font-variant-numeric:tabular-nums}
@@ -159,6 +160,7 @@ nav button.on{color:var(--paper);background:var(--ink2)}
   <button data-v="stock" onclick="go('stock')">Stock</button>
   <button data-v="add" onclick="go('add')">Ajouter</button>
   <button data-v="ticket" onclick="go('ticket')">Ticket</button>
+  <button data-v="recipes" onclick="go('recipes')">Recettes</button>
   <button data-v="prices" onclick="go('prices')">Prix</button>
   <button data-v="settings" onclick="go('settings')">Réglages</button>
 </nav>
@@ -182,16 +184,29 @@ const CATS = {
   autre:{label:'Autre', color:'var(--tin)'}
 };
 const MACROS = ['proteines','lipides','glucides'];
+const STORES = ['Auchan','Aldi','Carrefour','Intermarché','Monoprix','Lidl'];
+function normalizeStore(raw){
+  const s = String(raw||'').trim(); if(!s) return '';
+  const u = s.toUpperCase();
+  if(/CARREFOUR/.test(u)) return 'Carrefour';
+  if(/AUCHAN/.test(u)) return 'Auchan';
+  if(/\bALDI\b/.test(u)) return 'Aldi';
+  if(/INTERMARCH/.test(u)) return 'Intermarché';
+  if(/MONOPRIX/.test(u)) return 'Monoprix';
+  if(/\bLIDL\b/.test(u)) return 'Lidl';
+  return s;
+}
 const MK = {proteines:'pk', lipides:'fk', glucides:'ck'};
 const MF = {proteines:['p100',4], lipides:['f100',9], glucides:['c100',4]};
 const MODELS = [['claude-haiku-4-5-20251001','Haiku 4.5, économique'],['claude-sonnet-5','Sonnet 5, plus précis']];
-const DEFAULTS = {settings:{apiKey:'', model:MODELS[0][0], people:1, kcal:2000, water:2, targetDays:90, alertWeeks:8, split:{proteines:20, lipides:30, glucides:50}}, products:{}, items:[], purchases:[]};
+const STAPLES = ['Oignon','Ail','Œuf','Beurre','Huile','Sel','Poivre','Farine','Lait','Citron'];
+const DEFAULTS = {settings:{apiKey:'', model:MODELS[0][0], people:1, kcal:2000, water:2, targetDays:90, alertWeeks:8, split:{proteines:20, lipides:30, glucides:50}}, products:{}, items:[], purchases:[], favRecipes:[]};
 const KEY = 'reserve-v1';
 const clone = o => JSON.parse(JSON.stringify(o));
 
 function merge(d){
   const b = clone(DEFAULTS), s = d.settings || {};
-  return {settings:{...b.settings, ...s, split:{...b.settings.split, ...(s.split||{})}}, products:d.products||{}, items:d.items||[], purchases:d.purchases||[]};
+  return {settings:{...b.settings, ...s, split:{...b.settings.split, ...(s.split||{})}}, products:d.products||{}, items:d.items||[], purchases:d.purchases||[], favRecipes:d.favRecipes||[]};
 }
 function load(){ try{ const s = localStorage.getItem(KEY); if(s) return merge(JSON.parse(s)); }catch(e){} return clone(DEFAULTS); }
 let S = load();
@@ -267,14 +282,27 @@ function unitPriceFor(prod){
   const x = l[l.length-1]; return x.total / num(x.qty || 1);
 }
 function genericsList(){ return [...new Set(Object.values(S.products).map(p => p.generic).concat(S.purchases.map(p => p.generic)).filter(Boolean).map(s => s.trim()))].sort((a,b) => a.localeCompare(b,'fr')); }
-function storesList(){ return [...new Set(S.purchases.map(p => p.store).filter(Boolean))].sort((a,b) => a.localeCompare(b,'fr')); }
-function datalists(){ return `<datalist id="generics">${genericsList().map(g => `<option value="${esc(g)}">`).join('')}</datalist><datalist id="stores">${storesList().map(g => `<option value="${esc(g)}">`).join('')}</datalist>`; }
+function datalists(){ return `<datalist id="generics">${genericsList().map(g => `<option value="${esc(g)}">`).join('')}</datalist>`; }
+function storeSelect(target, value, other){
+  const showOther = other || (value && !STORES.includes(value));
+  const selVal = showOther ? 'Autre' : value;
+  const opts = ['', ...STORES, 'Autre'].map(o => `<option value="${esc(o)}" ${o===selVal?'selected':''}>${o||'Choisir…'}</option>`).join('');
+  return `<select onchange="setStore('${target}', this.value)">${opts}</select>${showOther ? `<input style="margin-top:6px" placeholder="Nom de l'enseigne" value="${esc(value)}" oninput="setStoreOther('${target}', this.value)">` : ''}`;
+}
+function storeTarget(t){ return t === 'tk' ? ticket : draft; }
+function setStore(t, v){
+  const obj = storeTarget(t); if(!obj) return;
+  if(v === 'Autre'){ obj.storeOther = true; if(STORES.includes(obj.store)) obj.store = ''; }
+  else { obj.storeOther = false; obj.store = v; }
+  render();
+}
+function setStoreOther(t, v){ const obj = storeTarget(t); if(obj) obj.store = v; }
 
 /* ---------- Navigation ---------- */
 let view = 'stock';
 function go(v){ view = v; render(); window.scrollTo(0,0); }
 function render(){
-  const views = {stock:renderStock, add:renderAdd, ticket:renderTicket, prices:renderPrices, settings:renderSettings};
+  const views = {stock:renderStock, add:renderAdd, ticket:renderTicket, recipes:renderRecipes, prices:renderPrices, settings:renderSettings};
   $('#main').innerHTML = views[view]();
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
 }
@@ -367,7 +395,7 @@ function bump(id){ const it = S.items.find(i => i.id === id); if(!it) return; it
 
 /* ---------- Vue Ajouter ---------- */
 let draft = null, loading = false;
-function emptyDraft(){ return {lotId:null, productKey:'', barcode:'', name:'', brand:'', generic:'', category:'glucides', weightG:'', kcal100:'', p100:'', f100:'', c100:'', qty:1, dateType:'DDM', date:'', price:'', store:'', image:'', catTouched:false}; }
+function emptyDraft(){ return {lotId:null, productKey:'', barcode:'', name:'', brand:'', generic:'', category:'glucides', weightG:'', kcal100:'', p100:'', f100:'', c100:'', qty:1, dateType:'DDM', date:'', price:'', store:'', storeOther:false, image:'', catTouched:false}; }
 function editLot(id){
   const it = S.items.find(i => i.id === id); if(!it) return;
   const p = S.products[it.productKey] || {};
@@ -404,7 +432,7 @@ function renderAdd(){
     <div><div class="seg" style="margin:.2rem 0"><button class="${d.dateType==='DDM'?'on':''}" onclick="setDT('DDM')">DDM, à consommer de préférence</button><button class="${d.dateType==='DLC'?'on':''}" onclick="setDT('DLC')">DLC, à consommer jusqu'au</button></div>
     <p class="hint">Les conserves portent presque toujours une DDM : elles restent consommables après la date.</p></div>
     ${edit ? '' : `<div class="g2"><label>Prix payé pour ce lot (TTC, facultatif)<input data-f="price" inputmode="decimal" value="${esc(d.price)}"></label>
-    <label>Enseigne<input data-f="store" list="stores" value="${esc(d.store)}"></label></div>`}
+    <label>Enseigne${storeSelect('f', d.store, d.storeOther)}</label></div>`}
   </div>
   <div class="actions"><button class="btn" onclick="cancelDraft()">Annuler</button><button class="btn primary" onclick="saveDraft()">Enregistrer</button></div>
   ${edit ? `<div class="actions"><button class="btn danger" onclick="deleteLot()">Supprimer ce lot</button></div>` : ''}
@@ -485,9 +513,8 @@ function renderTicket(){
   const tk = ticket, n = tk.lines.filter(l => l.keep).length;
   return `<h1>Vérifie le ticket</h1>
   <div class="card form">
-    <div class="g2"><label>Enseigne<input data-tk="store" list="stores" value="${esc(tk.store)}"></label>
+    <div class="g2"><label>Enseigne${storeSelect('tk', tk.store, tk.storeOther)}</label>
     <label>Date d'achat<input type="date" data-tk="date" value="${esc(tk.date)}"></label></div>
-    <label class="check"><input type="checkbox" data-tk="pricesHT" ${tk.pricesHT ? 'checked' : ''}> Prix affichés hors taxes (Metro, Promocash) : ajouter la TVA</label>
   </div>
   <ul class="lines">${tk.lines.map(lineCard).join('')}</ul>
   <div class="actions sticky"><button class="btn" onclick="if(confirm('Abandonner ce ticket ?')){ticket=null;render()}">Annuler</button><button class="btn primary" onclick="saveTicket()">Enregistrer ${n} achat${n>1?'s':''}</button></div>
@@ -495,7 +522,7 @@ function renderTicket(){
 }
 function productOptions(sel){ return Object.values(S.products).sort((a,b) => a.name.localeCompare(b.name,'fr')).map(p => `<option value="${esc(p.key)}" ${p.key===sel?'selected':''}>${esc(p.name)}</option>`).join(''); }
 function lineCalc(l){
-  const ttc = ticket.pricesHT ? num(l.total) * (1 + num(l.vat)/100) : num(l.total);
+  const ttc = num(l.total);
   const w = num(l.weightG) * num(l.qty);
   return `${eur(ttc)} TTC${w ? `, soit ${eur(ttc/(w/1000))}${unitOf(l.category)}` : ', poids inconnu'}`;
 }
@@ -505,10 +532,9 @@ function lineCard(l){
     <label class="check"><input type="checkbox" data-ln="${id}:keep" ${l.keep ? 'checked' : ''}><span class="raw">${esc(l.label)}</span></label>
     <div class="g2"><label>Nom<input data-ln="${id}:name" value="${esc(l.name)}"></label>
     <label>Type, pour comparer<input data-ln="${id}:generic" list="generics" value="${esc(l.generic)}"></label></div>
-    <div class="g4"><label>Qté<input inputmode="decimal" data-ln="${id}:qty" value="${esc(l.qty)}"></label>
-    <label>Total €${ticket.pricesHT ? ' HT' : ''}<input inputmode="decimal" data-ln="${id}:total" value="${esc(l.total)}"></label>
-    <label>g ou ml / unité<input inputmode="decimal" data-ln="${id}:weightG" value="${esc(l.weightG)}"></label>
-    ${ticket.pricesHT ? `<label>TVA %<input inputmode="decimal" data-ln="${id}:vat" value="${esc(l.vat)}"></label>` : ''}</div>
+    <div class="g3"><label>Qté<input inputmode="decimal" data-ln="${id}:qty" value="${esc(l.qty)}"></label>
+    <label>Total € TTC<input inputmode="decimal" data-ln="${id}:total" value="${esc(l.total)}"></label>
+    <label>g ou ml / unité<input inputmode="decimal" data-ln="${id}:weightG" value="${esc(l.weightG)}"></label></div>
     <div class="g2"><label>Catégorie<select data-ln="${id}:category">${catOptions(l.category)}</select></label>
     <label>Produit du stock<select data-ln="${id}:productKey"><option value="">Aucun</option>${productOptions(l.productKey)}</select></label></div>
     <p class="calc" id="calc-${id}">${lineCalc(l)}</p>
@@ -538,24 +564,13 @@ async function onReceipt(files){
   }catch(e){ ticket = {error: e.message || 'Erreur inconnue'}; }
   render();
 }
-async function callClaude(imgs){
-  const known = genericsList().slice(0,200);
-  const prompt = `Tu lis un ticket de caisse français (${imgs.length} photo${imgs.length>1?'s':''} du même ticket, dans l'ordre). Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour :
-{"store":"nom de l'enseigne","date":"YYYY-MM-DD","prices_ht":false,"items":[{"label":"libellé exact imprimé","name":"nom lisible en français","generic":"type générique court","category":"proteines","qty":1,"unit_price":0,"total":0,"weight_g":null,"vat_rate":5.5}]}
-Règles :
-- prices_ht = true si les prix des lignes sont hors taxes (typique de Metro ou Promocash), sinon false.
-- total = montant payé pour la ligne, après remise éventuelle sur cette ligne. qty = nombre d'unités.
-- weight_g = poids net ou volume d'UNE unité en grammes ou millilitres, déduit du libellé (ex. "3X80G" donne 240 si l'unité est le lot, "1KG" donne 1000). null si impossible à déduire.
-- category parmi : proteines, lipides, glucides (selon le macronutriment dominant en calories), eau, hygiene, pharmacie, autre.
-- vat_rate : 5.5 pour l'alimentaire et l'eau, 20 pour l'alcool et le non-alimentaire, sauf si le ticket indique autre chose.
-- generic : nom court et réutilisable pour comparer entre marques et enseignes (ex. "Thon au naturel", "Riz long", "Huile d'olive"). Réutilise en priorité un de ces types existants s'il correspond : ${JSON.stringify(known)}.
-- Ignore les lignes de total, de paiement, de TVA récapitulative et les consignes.`;
+async function claudeJSON(content, netErr){
   let r;
   try{
     r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST',
       headers:{'content-type':'application/json', 'x-api-key':S.settings.apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:S.settings.model, max_tokens:4096, messages:[{role:'user', content:[...imgs.map(d => ({type:'image', source:{type:'base64', media_type:'image/jpeg', data:d}})), {type:'text', text:prompt}]}]})});
-  }catch(e){ throw new Error("Pas de réseau. La lecture du ticket nécessite une connexion."); }
+      body:JSON.stringify({model:S.settings.model, max_tokens:4096, messages:[{role:'user', content}]})});
+  }catch(e){ throw new Error(netErr); }
   const j = await r.json().catch(() => ({}));
   if(!r.ok){
     if(r.status === 401) throw new Error('Clé API refusée. Vérifie-la dans Réglages.');
@@ -563,19 +578,31 @@ Règles :
   }
   const txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
   const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
-  if(a < 0) throw new Error('Réponse illisible. Réessaie avec une photo plus nette.');
-  try{ return JSON.parse(txt.slice(a, z+1)); }catch(e){ throw new Error('Réponse illisible. Réessaie avec une photo plus nette.'); }
+  if(a < 0) throw new Error('Réponse illisible. Réessaie.');
+  try{ return JSON.parse(txt.slice(a, z+1)); }catch(e){ throw new Error('Réponse illisible. Réessaie.'); }
+}
+async function callClaude(imgs){
+  const known = genericsList().slice(0,200);
+  const prompt = `Tu lis un ticket de caisse français (${imgs.length} photo${imgs.length>1?'s':''} du même ticket, dans l'ordre). Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour :
+{"store":"nom de l'enseigne","date":"YYYY-MM-DD","items":[{"label":"libellé exact imprimé","name":"nom lisible en français","generic":"type générique court","category":"proteines","qty":1,"unit_price":0,"total":0,"weight_g":null}]}
+Règles :
+- total = montant payé TTC pour la ligne, après remise éventuelle sur cette ligne. qty = nombre d'unités.
+- weight_g = poids net ou volume d'UNE unité en grammes ou millilitres, déduit du libellé (ex. "3X80G" donne 240 si l'unité est le lot, "1KG" donne 1000). null si impossible à déduire.
+- category parmi : proteines, lipides, glucides (selon le macronutriment dominant en calories), eau, hygiene, pharmacie, autre.
+- generic : nom court et réutilisable pour comparer entre marques et enseignes (ex. "Thon au naturel", "Riz long", "Huile d'olive"). Réutilise en priorité un de ces types existants s'il correspond : ${JSON.stringify(known)}.
+- Ignore les lignes de total, de paiement, de TVA récapitulative et les consignes.`;
+  return claudeJSON([...imgs.map(d => ({type:'image', source:{type:'base64', media_type:'image/jpeg', data:d}})), {type:'text', text:prompt}],
+    "Pas de réseau. La lecture du ticket nécessite une connexion.");
 }
 function normalizeTicket(r){
-  const store = String(r.store || '').trim();
-  return {store, date:/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : todayLocal(),
-    pricesHT: !!r.prices_ht || /metro|promocash/i.test(store),
+  const store = normalizeStore(r.store);
+  return {store, storeOther: !!store && !STORES.includes(store), date:/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : todayLocal(),
     lines:(r.items || []).map(it => {
       const cat = CATS[it.category] ? it.category : 'autre', qty = num(it.qty) || 1;
       const link = Object.values(S.products).find(p => p.generic && sameGeneric(p.generic, it.generic));
       return {id:uid(), keep:true, label:it.label || it.name || '', name:it.name || it.label || '', generic:it.generic || it.name || '', category:cat, qty,
         total:round2(num(it.total) || num(it.unit_price)*qty), weightG:num(it.weight_g) || (link ? num(link.weightG) : '') || '',
-        vat:num(it.vat_rate) || (['hygiene','pharmacie','autre'].includes(cat) ? 20 : 5.5), productKey:link ? link.key : ''};
+        productKey:link ? link.key : ''};
     })};
 }
 function saveTicket(){
@@ -583,12 +610,119 @@ function saveTicket(){
   let n = 0;
   for(const l of tk.lines){
     if(!l.keep || !num(l.total)) continue;
-    const total = tk.pricesHT ? num(l.total) * (1 + num(l.vat)/100) : num(l.total);
     S.purchases.push({id:uid(), productKey:l.productKey || null, label:l.label, name:l.name, generic:String(l.generic||l.name).trim(), category:l.category,
-      store, date:tk.date, qty:num(l.qty) || 1, total:round2(total), weightG:num(l.weightG), source:'ticket'});
+      store, date:tk.date, qty:num(l.qty) || 1, total:round2(num(l.total)), weightG:num(l.weightG), source:'ticket'});
     n++;
   }
   save(); ticket = null; toast(`${n} achat${n>1?'s':''} enregistré${n>1?'s':''}`); go('prices');
+}
+
+/* ---------- Vue Recettes ---------- */
+let recipes = null, recipeOpts = {people:S.settings.people || 1, withStaples:true, noPower:false};
+function stockSummary(){
+  const m = {};
+  for(const it of S.items){
+    if(it.qty <= 0 || isDead(it)) continue;
+    const p = S.products[it.productKey]; if(!p) continue;
+    const e = (m[it.productKey] ??= {key:it.productKey, name:p.name, category:p.category, weightG:num(p.weightG), qty:0, soonest:null});
+    e.qty += it.qty;
+    if(it.date && (!e.soonest || it.date < e.soonest)) e.soonest = it.date;
+  }
+  return Object.values(m).sort((a,b) => (a.soonest||'9999').localeCompare(b.soonest||'9999'));
+}
+function recipesPrompt(stock, o){
+  const list = stock.map(s => `- clé "${s.key}" : ${esc(s.name)}, ${s.qty} unité(s)${s.weightG ? ` de ${fmt(s.weightG)}${s.category==='eau'?' ml':' g'}` : ''}${s.soonest ? `, date ${s.soonest}${daysUntil(s.soonest)<0?' (dépassée)':''}` : ''}`).join('\n');
+  return `Tu es un assistant culinaire. Voici le stock de conserves et produits secs disponible, trié du plus urgent au moins urgent :
+${list}
+${o.withStaples ? `Des frais courants sont aussi disponibles en quantité suffisante : ${STAPLES.join(', ')}.` : "N'utilise AUCUN produit qui n'est pas dans la liste du stock ci-dessus."}
+${o.noPower ? "Contrainte : pas d'électricité disponible. Cuisson uniquement au réchaud à gaz ou sans cuisson, temps courts, peu d'eau." : ''}
+Propose 3 recettes pour ${o.people} personne${o.people>1?'s':''}, en utilisant en priorité les produits dont la date est la plus proche. Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour :
+{"recipes":[{"title":"...","servings":${o.people},"time_minutes":30,"kcal_per_portion":450,"steps":["..."],"ingredients":[{"stock_key":"clé exacte de la liste ci-dessus, ou null si frais courant","name":"nom lisible","qty":1,"staple":false}]}]}
+Règles :
+- Pour un ingrédient venant du stock, stock_key doit être EXACTEMENT une des clés listées ci-dessus, et qty (en unités/boîtes) ne doit jamais dépasser la quantité disponible indiquée pour cette clé.
+- Pour un frais courant, stock_key doit être null et staple doit être true ; n'utilise que des produits de la liste de frais courants autorisée ci-dessus.
+- N'invente aucun produit qui n'est ni dans le stock ni dans les frais courants autorisés.
+- steps : étapes courtes et concrètes.`;
+}
+function normalizeRecipes(json, stock, o){
+  const byKey = {}; for(const s of stock) byKey[s.key] = s;
+  return (json.recipes || []).slice(0,3).map(r => {
+    const ingredients = (r.ingredients || []).map(it => {
+      if(it.stock_key && byKey[it.stock_key]){
+        const avail = byKey[it.stock_key].qty, qty = Math.max(1, Math.round(num(it.qty)) || 1);
+        return {name:byKey[it.stock_key].name, stockKey:it.stock_key, qty, avail, staple:false, ok:qty <= avail};
+      }
+      const isStaple = STAPLES.some(s => sameGeneric(s, it.name));
+      return {name:it.name || '?', stockKey:null, qty:num(it.qty) || 1, avail:null, staple:isStaple, ok:isStaple};
+    });
+    const missing = ingredients.filter(i => !i.ok).map(i => i.stockKey ? `${i.name} (il n'en reste que ${i.avail})` : i.name);
+    return {id:uid(), title:r.title || 'Recette', servings:Math.max(1, parseInt(r.servings) || o.people), timeMin:num(r.time_minutes), kcal:num(r.kcal_per_portion),
+      steps:(r.steps || []).map(String), ingredients, missing};
+  });
+}
+async function generateRecipes(){
+  if(!S.settings.apiKey){ toast('Ajoute ta clé API dans Réglages'); go('settings'); return; }
+  const stock = stockSummary();
+  if(!stock.length){ toast('Stock vide : ajoute des produits pour obtenir des recettes.'); return; }
+  const o = recipeOpts;
+  recipes = {loading:true}; render();
+  try{
+    const json = await claudeJSON([{type:'text', text:recipesPrompt(stock, o)}], "Pas de réseau. Cette fonction nécessite une connexion.");
+    const list = normalizeRecipes(json, stock, o);
+    recipes = {list: list.length ? list : null, error: list.length ? null : "Aucune recette obtenue. Réessaie."};
+  }catch(e){ recipes = {error: e.message || 'Erreur inconnue'}; }
+  render();
+}
+function findRecipe(id){ return (recipes && recipes.list && recipes.list.find(r => r.id === id)) || S.favRecipes.find(r => r.id === id); }
+function toggleFav(id){
+  const idx = S.favRecipes.findIndex(f => f.id === id);
+  if(idx >= 0){ S.favRecipes.splice(idx, 1); toast('Retiré des favoris'); }
+  else { const r = findRecipe(id); if(!r) return; S.favRecipes.push(r); toast('Ajouté aux favoris'); }
+  save(); render();
+}
+function cookRecipe(id){
+  const r = findRecipe(id); if(!r) return;
+  if(!confirm(`Retirer du stock les ingrédients de "${r.title}" ?`)) return;
+  for(const ing of r.ingredients){
+    if(!ing.stockKey) continue;
+    let need = ing.qty;
+    const lots = S.items.filter(it => it.productKey === ing.stockKey && it.qty > 0 && !isDead(it)).sort((a,b) => (a.date||'9999').localeCompare(b.date||'9999'));
+    for(const lot of lots){ if(need <= 0) break; const take = Math.min(lot.qty, need); lot.qty -= take; need -= take; }
+  }
+  S.items = S.items.filter(it => it.qty > 0);
+  save(); toast('Stock mis à jour'); go('stock');
+}
+function recipeCard(r){
+  const isFav = S.favRecipes.some(f => f.id === r.id);
+  return `<div class="card" style="margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+      <h2 style="margin:0">${esc(r.title)}</h2>
+      <button class="btn small" onclick="toggleFav('${r.id}')">${isFav ? '★ Favori' : '☆ Favori'}</button>
+    </div>
+    <p class="hint">${r.servings} portion${r.servings>1?'s':''}${r.timeMin ? ` · ${fmt(r.timeMin)} min` : ''}${r.kcal ? ` · ${fmt(r.kcal)} kcal/portion` : ''}</p>
+    <h3>Ingrédients</h3>
+    <ul>${r.ingredients.map(i => `<li>${fmt(i.qty)} × ${esc(i.name)}${i.staple ? ' (frais courant)' : ''}${!i.ok ? ' <span class="warn">— indisponible</span>' : ''}</li>`).join('')}</ul>
+    ${r.missing.length ? `<p class="warn">Manque : ${r.missing.map(esc).join(', ')}</p>` : ''}
+    <h3>Étapes</h3>
+    <ol>${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+    <div class="actions"><button class="btn primary" onclick="cookRecipe('${r.id}')">Je l'ai cuisinée</button></div>
+  </div>`;
+}
+function renderRecipes(){
+  if(recipes && recipes.loading) return `<div class="loading"><div class="spin"></div><p>Recherche de recettes…</p></div>`;
+  if(recipes && recipes.error) return `<h1>Recettes</h1><p class="warn">${esc(recipes.error)}</p><div class="actions"><button class="btn primary" onclick="recipes=null;render()">Réessayer</button></div>`;
+  if(recipes && recipes.list) return `<h1>Recettes</h1><div class="actions"><button class="btn" onclick="recipes=null;render()">Nouvelles options</button></div>${recipes.list.map(recipeCard).join('')}`;
+  const o = recipeOpts;
+  return `<h1>Recettes</h1>
+  <p class="lead">Génère des idées de recettes à partir de ton stock, via l'API Anthropic (même clé que pour les tickets, appel depuis ce téléphone).</p>
+  ${!S.settings.apiKey ? `<p class="warn">Ajoute d'abord ta clé API dans Réglages.</p>` : ''}
+  <div class="form card">
+    <label>Nombre de personnes<input inputmode="numeric" value="${o.people}" oninput="recipeOpts.people=num(this.value)||1"></label>
+    <div class="seg" role="group" aria-label="Ingrédients autorisés"><button class="${!o.withStaples?'on':''}" onclick="recipeOpts.withStaples=false;render()">Uniquement le stock</button><button class="${o.withStaples?'on':''}" onclick="recipeOpts.withStaples=true;render()">Stock + frais courants</button></div>
+    <label class="check"><input type="checkbox" ${o.noPower?'checked':''} onchange="recipeOpts.noPower=this.checked"> Mode sans électricité (réchaud, cuisson courte, peu d'eau)</label>
+  </div>
+  <div class="actions"><button class="btn primary big" onclick="generateRecipes()">Générer 3 recettes</button></div>
+  ${S.favRecipes.length ? `<h2>Favoris</h2>${S.favRecipes.map(recipeCard).join('')}` : ''}`;
 }
 
 /* ---------- Vue Prix ---------- */
@@ -615,7 +749,7 @@ function renderPrices(){
     const last = list[list.length-1];
     const main = withK.length ? `${eur(ppk(withK[withK.length-1]))}${u}` : eur(last.total / num(last.qty||1));
     const stores = {};
-    for(const p of list){ const v = ppk(p); (stores[p.store] ??= {n:0, sum:0, cnt:0, last:p.date}); stores[p.store].n++; stores[p.store].last = p.date; if(v != null){ stores[p.store].sum += v; stores[p.store].cnt++; } }
+    for(const p of list){ const v = ppk(p); const s = (stores[p.store] ??= {n:0, sum:0, cnt:0, last:p.date, lastPrice:null}); s.n++; s.last = p.date; if(v != null){ s.sum += v; s.cnt++; s.lastPrice = v; } }
     const ranked = Object.entries(stores).filter(([,s]) => s.cnt).map(([k,s]) => [k, s.sum/s.cnt]).sort((a,b) => a[1]-b[1]);
     const sub = [];
     if(ranked.length > 1) sub.push(`Moins cher chez ${esc(ranked[0][0])}, ${eur(ranked[0][1])}${u} en moyenne`);
@@ -628,7 +762,7 @@ function renderPrices(){
       <span class="pn"><span class="cattag" style="background:${(CATS[g.category]||CATS.autre).color}"></span>${esc(g.name)}</span><span class="pv">${main}</span>
       <span class="ps">${sub.join('. ')}.</span>${spark(withK.map(ppk))}</button>`;
     if(pOpen.has(g.key)){
-      html += `<div class="pdet">${ranked.length ? `<table><tr><th>Enseigne</th><th class="r">Moyenne${u}</th><th class="r">Achats</th></tr>${ranked.map(([s,v]) => `<tr><td>${esc(s)}</td><td class="r">${eur(v)}</td><td class="r">${stores[s].n}</td></tr>`).join('')}</table>` : ''}
+      html += `<div class="pdet">${ranked.length ? `<table><tr><th>Enseigne</th><th class="r">Moyenne${u}</th><th class="r">Dernier${u}</th><th class="r">Achats</th></tr>${ranked.map(([s,v]) => `<tr><td>${esc(s)}</td><td class="r">${eur(v)}</td><td class="r">${stores[s].lastPrice != null ? eur(stores[s].lastPrice) : '—'}</td><td class="r">${stores[s].n}</td></tr>`).join('')}</table>` : ''}
       <table><tr><th>Date</th><th>Enseigne</th><th class="r">Payé</th><th class="r">${u}</th><th></th></tr>
       ${list.slice().reverse().map(p => `<tr><td>${fdate(p.date)}</td><td>${esc(p.store)}</td><td class="r">${eur(p.total)}</td><td class="r">${ppk(p) != null ? eur(ppk(p)) : ''}</td><td class="r"><button class="del" aria-label="Supprimer cet achat" onclick="delPurchase('${p.id}')">×</button></td></tr>`).join('')}</table></div>`;
     }
@@ -700,7 +834,6 @@ function onField(e){
     $('#splitsum').innerHTML = sum === 100 ? 'Total : 100 %' : `<span class="warn">Total : ${sum} %, il faut arriver à 100 %.</span>`;
   } else if(el.dataset.tk && ticket){
     ticket[el.dataset.tk] = v;
-    if(el.dataset.tk === 'pricesHT' && e.type === 'change') render();
   } else if(el.dataset.ln && ticket){
     const [id, f] = el.dataset.ln.split(':'); const l = ticket.lines.find(x => x.id === id); if(!l) return;
     l[f] = v;
